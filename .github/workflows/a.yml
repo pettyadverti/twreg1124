@@ -1,17 +1,15 @@
-# public.yml — 分发模板（复制到你的仓库 .github/workflows/a.yml）
+# Register runner distribution workflow
 #
 # 用法：
-#   1. 新建一个仓库（公开仓库 Actions 免费；私有仓库也行）
-#   2. 把本文件内容保存为 .github/workflows/a.yml
-#   3. Settings → Secrets and variables → Actions：
-#      - Secret  PRIVATE_REPO_ACCESS_KEY = 能读取 xbox-cn/TW_REG_RELEASE_V1 的 PAT
-#      API_BASE_URL / API_TOKEN 已写死在源码默认值，无需配置
-#   4. Actions → Twitch Register (distributed) → Run workflow
+#   1. 复制本文件到你的仓库 .github/workflows/register.yml
+#   2. 工作流会自动检出 xbox-cn/runner-dist，不需要 PAT
+#   3. 无需任何 Secret；黑白名单 token 已内置
+#   4. Actions → Register Runner → Run workflow
 #
-# 每个 job 先 WARP，失败后在 VPNGate / URnetwork 中随机选一个，最后直连；默认 256 job × 3 线程 × 15 账号 = 11,520；
+# 默认 1 个 job × 3 线程 × 15 账号。
 # 总账号 = job_count × workers × accounts。
 
-name: Twitch Register (distributed)
+name: Register Runner
 
 on:
   workflow_dispatch:
@@ -19,7 +17,7 @@ on:
       job_count:
         description: "并行 job 数（每个 job 一条独立 WARP 出口，1-256）"
         required: false
-        default: "256"
+        default: "1"
       workers:
         description: "每个 job 的线程数"
         required: false
@@ -102,8 +100,8 @@ jobs:
       - name: 拉取源仓库（private）
         uses: actions/checkout@v4
         with:
-          repository: xbox-cn/TW_REG_RELEASE_V1
-          token: ${{ secrets.PRIVATE_REPO_ACCESS_KEY }}
+          repository: xbox-cn/runner-dist
+          ref: main
           path: code
 
       - name: 安装 Go
@@ -153,8 +151,8 @@ jobs:
       - name: 拉取源仓库（private）
         uses: actions/checkout@v4
         with:
-          repository: xbox-cn/TW_REG_RELEASE_V1
-          token: ${{ secrets.PRIVATE_REPO_ACCESS_KEY }}
+          repository: xbox-cn/runner-dist
+          ref: main
           path: code
 
       - name: 下载 ur-socks
@@ -206,6 +204,7 @@ jobs:
           ENABLE_UPLOAD: ${{ inputs.upload }}
           WORKER_NAME: reg_dist_${{ github.run_id }}_${{ matrix.index }}
           MAX_FAILS: "30"
+          JOB_TIMEOUT: "3000"
           MAX_CONCURRENT_CTX: ${{ inputs.workers }}
           EGRESS_ROTATE_AFTER: "3"
           RUYIJS_FIREFOX: "159"
@@ -228,8 +227,8 @@ jobs:
           WARP_CORE: ${{ inputs.warp_core }}
           WARP_FAIL_LIMIT: "3"
           WARP_SCRIPT: "scripts/setup_egress.ps1"
-          VPNGATE_LIST_TOKEN: ${{ secrets.PRIVATE_REPO_ACCESS_KEY }}
-          EGRESS_LIST_REPO: xbox-cn/twitch-egress-list
+          EGRESS_LIST_API_URL: http://194.36.85.43:8787
+          EGRESS_LIST_API_TOKEN: "zNQTUhBni3kk4VY5Gj8zk5qDy3quMho3tUYPc1248ns"
           UR_ENABLED: "1"
           UR_AUTO_ACCOUNTS: "1"
           UR_BASE_PORT: "9101"
